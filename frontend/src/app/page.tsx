@@ -20,9 +20,6 @@ import {
   Check,
   Compass,
   AlertCircle,
-  Clock,
-  ArrowRight,
-  ShieldCheck,
   ChevronRight,
   Monitor
 } from 'lucide-react';
@@ -92,8 +89,14 @@ export default function Home() {
   // Copy state mapping
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Stagger mounting effect
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
     checkUser();
+    // Enable mounting animation
+    const timer = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(timer);
   }, []);
 
   async function checkUser() {
@@ -316,8 +319,8 @@ export default function Home() {
     return (
       <div className="flex h-screen items-center justify-center bg-[#050505] text-slate-100 font-sans">
         <div className="flex flex-col items-center gap-6">
-          <div className="h-12 w-12 rounded-full border-t-2 border-indigo-500 animate-spin"></div>
-          <p className="text-neutral-450 text-xs font-semibold tracking-[0.2em] uppercase">Initializing LeadScout</p>
+          <div className="h-10 w-10 rounded-full border-t-2 border-indigo-500 animate-spin"></div>
+          <p className="text-neutral-450 text-[10px] font-bold tracking-[0.25em] uppercase">Initializing LeadScout</p>
         </div>
       </div>
     );
@@ -332,8 +335,10 @@ export default function Home() {
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[350px] w-[350px] rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none"></div>
           <div className="absolute bottom-1/4 left-1/3 h-[250px] w-[250px] rounded-full bg-purple-600/10 blur-[90px] pointer-events-none"></div>
 
-          {/* Double-Bezel Card Wrapper */}
-          <div className="w-full max-w-md bg-[#0a0a0c]/80 border border-white/5 p-2 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]">
+          {/* Double-Bezel Card Wrapper with Spring Entrance */}
+          <div className={`w-full max-w-md bg-[#0a0a0c]/80 border border-white/5 p-2 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+            mounted ? 'scale-100 opacity-100' : 'scale-[0.96] opacity-0'
+          }`}>
             <div className="bg-[#070709] border border-white/5 p-8 rounded-[calc(2.5rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-6">
               
               <div className="flex flex-col items-center text-center">
@@ -347,7 +352,7 @@ export default function Home() {
                   Verify Your Identity
                 </h2>
                 <p className="mt-2.5 text-xs text-neutral-400 leading-relaxed">
-                  We've sent a 6-digit verification code to <span className="text-neutral-200 font-medium">{email}</span>.
+                  We've sent a 6-digit verification code to <span className="text-neutral-250 font-medium">{email}</span>.
                 </p>
               </div>
 
@@ -362,7 +367,7 @@ export default function Home() {
                     maxLength={6}
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-center tracking-[0.25em] text-xl font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all duration-500"
+                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-center tracking-[0.25em] text-xl font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-[border-color,background-color] duration-200"
                     placeholder="123456"
                   />
                 </div>
@@ -375,14 +380,14 @@ export default function Home() {
                 )}
 
                 <div className="space-y-3">
-                  {/* Button-in-Button Primary CTA */}
+                  {/* Premium Spring Press Button */}
                   <button
                     type="submit"
                     disabled={verifyingOtp}
-                    className="group w-full flex justify-between items-center py-2.5 pl-5 pr-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] shadow-lg shadow-indigo-500/10 disabled:opacity-50"
+                    className="group w-full flex justify-between items-center py-2.5 pl-5 pr-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 active:scale-[0.97] hover:scale-[1.01] transition-[transform,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] shadow-lg shadow-indigo-500/10 disabled:opacity-50"
                   >
                     <span>{verifyingOtp ? 'Verifying Code...' : 'Verify & Continue'}</span>
-                    <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                    <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
                       <ChevronRight className="h-4 w-4" strokeWidth={1.2} />
                     </div>
                   </button>
@@ -390,7 +395,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    className="w-full text-center py-2 text-xs font-semibold text-neutral-450 hover:text-white transition-colors"
+                    className="w-full text-center py-2 text-xs font-semibold text-neutral-450 hover:text-white transition-colors duration-150"
                   >
                     Resend Code
                   </button>
@@ -403,7 +408,7 @@ export default function Home() {
                       setShowOtpInput(false);
                       setAuthError('');
                     }}
-                    className="text-xs font-medium text-neutral-400 hover:text-white transition-colors"
+                    className="text-xs font-medium text-neutral-400 hover:text-white transition-colors duration-150"
                   >
                     Back to Sign In
                   </button>
@@ -421,8 +426,10 @@ export default function Home() {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[350px] w-[350px] rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none"></div>
         <div className="absolute bottom-1/4 left-1/3 h-[250px] w-[250px] rounded-full bg-purple-600/10 blur-[90px] pointer-events-none"></div>
 
-        {/* Double-Bezel Card Wrapper */}
-        <div className="w-full max-w-md bg-[#0a0a0c]/80 border border-white/5 p-2 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]">
+        {/* Double-Bezel Card Wrapper with Spring Entrance */}
+        <div className={`w-full max-w-md bg-[#0a0a0c]/80 border border-white/5 p-2 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+          mounted ? 'scale-100 opacity-100' : 'scale-[0.96] opacity-0'
+        }`}>
           <div className="bg-[#070709] border border-white/5 p-8 rounded-[calc(2.5rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-6">
             
             <div className="flex flex-col items-center text-center">
@@ -451,7 +458,7 @@ export default function Home() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all duration-500"
+                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-[border-color,background-color] duration-200"
                     placeholder="name@company.com"
                   />
                 </div>
@@ -464,7 +471,7 @@ export default function Home() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all duration-500"
+                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-[border-color,background-color] duration-200"
                     placeholder="••••••••"
                   />
                 </div>
@@ -481,10 +488,10 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group w-full flex justify-between items-center py-2.5 pl-5 pr-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] shadow-lg shadow-indigo-500/10 disabled:opacity-50"
+                  className="group w-full flex justify-between items-center py-2.5 pl-5 pr-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 active:scale-[0.97] hover:scale-[1.01] transition-[transform,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] shadow-lg shadow-indigo-500/10 disabled:opacity-50"
                 >
                   <span>{loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}</span>
-                  <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                  <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
                     <ChevronRight className="h-4 w-4" strokeWidth={1.2} />
                   </div>
                 </button>
@@ -497,7 +504,7 @@ export default function Home() {
                     setIsSignUp(!isSignUp);
                     setAuthError('');
                   }}
-                  className="text-xs font-medium text-neutral-450 hover:text-white transition-colors"
+                  className="text-xs font-medium text-neutral-450 hover:text-white transition-colors duration-150"
                 >
                   {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
                 </button>
@@ -530,7 +537,7 @@ export default function Home() {
         <nav className="flex-1 px-4 py-8 space-y-1.5">
           <button
             onClick={() => setActiveTab('leads')}
-            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-[background-color,border-color,color] duration-150 ease-out ${
               activeTab === 'leads'
                 ? 'bg-white/[0.04] text-white border border-white/10 shadow-[inset_0_1px_0px_rgba(255,255,255,0.05)]'
                 : 'text-neutral-400 hover:bg-white/[0.02] hover:text-white border border-transparent'
@@ -542,7 +549,7 @@ export default function Home() {
           
           <button
             onClick={() => setActiveTab('keywords')}
-            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-[background-color,border-color,color] duration-150 ease-out ${
               activeTab === 'keywords'
                 ? 'bg-white/[0.04] text-white border border-white/10 shadow-[inset_0_1px_0px_rgba(255,255,255,0.05)]'
                 : 'text-neutral-400 hover:bg-white/[0.02] hover:text-white border border-transparent'
@@ -554,7 +561,7 @@ export default function Home() {
 
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-[background-color,border-color,color] duration-150 ease-out ${
               activeTab === 'analytics'
                 ? 'bg-white/[0.04] text-white border border-white/10 shadow-[inset_0_1px_0px_rgba(255,255,255,0.05)]'
                 : 'text-neutral-400 hover:bg-white/[0.02] hover:text-white border border-transparent'
@@ -578,7 +585,7 @@ export default function Home() {
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-white/5 hover:border-red-500/10 rounded-xl text-xs font-bold text-neutral-450 hover:text-red-400 hover:bg-red-500/5 transition-all duration-500"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-white/5 hover:border-red-500/10 rounded-xl text-xs font-bold text-neutral-450 hover:text-red-400 hover:bg-red-500/5 transition-[background-color,border-color,color] duration-150 active:scale-[0.97] ease-out"
           >
             <LogOut className="h-4.5 w-4.5" strokeWidth={1.2} />
             Sign Out
@@ -598,7 +605,7 @@ export default function Home() {
             <button
               onClick={fetchData}
               disabled={refreshing}
-              className="flex items-center gap-2 py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-full text-xs font-bold transition-all duration-500 text-neutral-200"
+              className="flex items-center gap-2 py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-full text-xs font-bold transition-[background-color,color] duration-150 active:scale-[0.97] ease-out text-neutral-200"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={1.2} />
               {refreshing ? 'Syncing...' : 'Sync Data'}
@@ -611,7 +618,7 @@ export default function Home() {
           
           {/* VIEW: LEADS */}
           {activeTab === 'leads' && (
-            <div className="space-y-8 animate-fade-up">
+            <div className="space-y-8">
               
               {/* Asymmetric Filter Grid */}
               <div className="grid grid-cols-12 gap-6 bg-[#0a0a0c]/50 p-6 border border-white/5 rounded-3xl backdrop-blur-md">
@@ -625,7 +632,7 @@ export default function Home() {
                       <button
                         key={p}
                         onClick={() => setPlatformFilter(p)}
-                        className={`text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-wider transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                        className={`text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-wider transition-[background-color,color] duration-150 active:scale-[0.97] ease-out ${
                           platformFilter === p
                             ? 'bg-white/10 text-white border border-white/5 shadow-md'
                             : 'text-neutral-450 hover:text-white'
@@ -646,7 +653,7 @@ export default function Home() {
                       <button
                         key={s}
                         onClick={() => setStatusFilter(s)}
-                        className={`text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-wider transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                        className={`text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-wider transition-[background-color,color] duration-150 active:scale-[0.97] ease-out ${
                           statusFilter === s
                             ? 'bg-white/10 text-white border border-white/5 shadow-md'
                             : 'text-neutral-450 hover:text-white'
@@ -673,7 +680,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6">
-                  {filteredLeads.map(lead => {
+                  {filteredLeads.map((lead, index) => {
                     const post = lead.scraped_posts;
                     const keyword = lead.monitored_keywords;
                     
@@ -686,7 +693,8 @@ export default function Home() {
                     return (
                       <div 
                         key={lead.id} 
-                        className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2.2rem] shadow-2xl backdrop-blur-md transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/10"
+                        style={{ animationDelay: `${index * 40}ms` }}
+                        className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2.2rem] shadow-2xl backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-white/10 animate-fade-up"
                       >
                         <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2.2rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-5">
                           
@@ -769,7 +777,7 @@ export default function Home() {
                               <div className="absolute bottom-4 right-4 flex gap-2">
                                 <button
                                   onClick={() => copyToClipboard(lead.draft_reply || '', lead.id)}
-                                  className="flex items-center gap-1.5 bg-[#0a0a0c] border border-white/5 hover:border-white/10 text-neutral-400 hover:text-white rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-500 shadow-sm"
+                                  className="flex items-center gap-1.5 bg-[#0a0a0c] border border-white/5 hover:border-white/10 text-neutral-400 hover:text-white rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-[0.97] ease-out shadow-sm"
                                 >
                                   {copiedId === lead.id ? (
                                     <>
@@ -788,7 +796,7 @@ export default function Home() {
                                   href={post.url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="flex items-center gap-1.5 bg-[#0a0a0c] border border-white/5 hover:border-white/10 text-neutral-400 hover:text-white rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-500 shadow-sm"
+                                  className="flex items-center gap-1.5 bg-[#0a0a0c] border border-white/5 hover:border-white/10 text-neutral-400 hover:text-white rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-[0.97] ease-out shadow-sm"
                                 >
                                   <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.2} />
                                   Open Post
@@ -808,10 +816,10 @@ export default function Home() {
 
           {/* VIEW: KEYWORDS */}
           {activeTab === 'keywords' && (
-            <div className="grid grid-cols-12 gap-8 animate-fade-up">
+            <div className="grid grid-cols-12 gap-8">
               
               {/* Left Form Panel */}
-              <div className="col-span-12 lg:col-span-4 bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2.2rem] shadow-2xl backdrop-blur-md self-start">
+              <div className="col-span-12 lg:col-span-4 bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2.2rem] shadow-2xl backdrop-blur-md self-start animate-fade-up">
                 <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2.2rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-6">
                   
                   <h2 className="text-sm font-extrabold uppercase tracking-widest text-white">Add Keyword</h2>
@@ -826,7 +834,7 @@ export default function Home() {
                         required
                         value={newKeyword}
                         onChange={(e) => setNewKeyword(e.target.value)}
-                        className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-500"
+                        className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200"
                         placeholder="e.g. recommend a calendar app"
                       />
                     </div>
@@ -864,13 +872,13 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Button-in-button style primary CTA */}
+                    {/* Premium Spring Press Button */}
                     <button
                       type="submit"
-                      className="group w-full flex justify-between items-center py-2 pl-4 pr-1.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] shadow-lg shadow-indigo-500/10"
+                      className="group w-full flex justify-between items-center py-2 pl-4 pr-1.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 active:scale-[0.97] hover:scale-[1.01] transition-all duration-150 ease-out shadow-lg shadow-indigo-500/10"
                     >
                       <span>Create Monitor</span>
-                      <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                      <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
                         <Plus className="h-4 w-4" strokeWidth={1.2} />
                       </div>
                     </button>
@@ -888,16 +896,17 @@ export default function Home() {
                 </h2>
 
                 {keywords.length === 0 ? (
-                  <div className="text-center py-20 bg-[#0a0a0c]/20 border border-dashed border-white/5 rounded-[2rem]">
+                  <div className="text-center py-20 bg-[#0a0a0c]/20 border border-dashed border-white/5 rounded-[2rem] animate-fade-up">
                     <Search className="h-8 w-8 text-neutral-500 mx-auto mb-3" strokeWidth={1} />
                     <p className="text-xs text-neutral-450">No active keywords monitored yet.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {keywords.map(kw => (
+                    {keywords.map((kw, index) => (
                       <div 
                         key={kw.id} 
-                        className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md flex items-center justify-between"
+                        style={{ animationDelay: `${index * 40}ms` }}
+                        className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md flex items-center justify-between animate-fade-up"
                       >
                         <div className="bg-[#070709] border border-white/5 p-5 rounded-[calc(2rem-0.5rem)] w-full flex items-center justify-between gap-4">
                           <div className="min-w-0">
@@ -914,7 +923,7 @@ export default function Home() {
                           </div>
                           <button
                             onClick={() => handleDeleteKeyword(kw.id)}
-                            className="p-2.5 border border-white/5 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 transition-all duration-500 shrink-0"
+                            className="p-2.5 border border-white/5 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 transition-all duration-200 active:scale-[0.97] ease-out shrink-0"
                           >
                             <Trash2 className="h-4 w-4" strokeWidth={1.2} />
                           </button>
