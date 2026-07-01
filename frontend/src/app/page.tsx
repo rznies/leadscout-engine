@@ -64,6 +64,10 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
 
   // Dashboard views: 'leads' | 'keywords' | 'analytics'
   const [activeTab, setActiveTab] = useState<'leads' | 'keywords' | 'analytics'>('leads');
@@ -114,6 +118,8 @@ export default function Home() {
         const { data, error } = await insforge.auth.signUp({ email, password });
         if (error) {
           setAuthError(error.message || 'Signup failed.');
+        } else if (data?.requireEmailVerification) {
+          setShowOtpInput(true);
         } else if (data?.user) {
           setUser(data.user);
           fetchData();
@@ -121,7 +127,12 @@ export default function Home() {
       } else {
         const { data, error } = await insforge.auth.signInWithPassword({ email, password });
         if (error) {
-          setAuthError(error.message || 'Invalid email or password.');
+          if (error.statusCode === 403 || error.message?.toLowerCase().includes('confirm') || error.message?.toLowerCase().includes('verify')) {
+            setShowOtpInput(true);
+            setAuthError('Email not verified yet. Please enter the verification OTP sent to your email.');
+          } else {
+            setAuthError(error.message || 'Invalid email or password.');
+          }
         } else if (data?.user) {
           setUser(data.user);
           fetchData();
@@ -131,6 +142,49 @@ export default function Home() {
       setAuthError(err.message || 'Authentication error.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError('');
+    setVerifyingOtp(true);
+    
+    try {
+      const { data, error } = await insforge.auth.verifyEmail({
+        email,
+        otp: otpCode.trim()
+      });
+      
+      if (error) {
+        setAuthError(error.message || 'Verification failed. Please check the code.');
+      } else if (data?.user) {
+        setUser(data.user);
+        setShowOtpInput(false);
+        setOtpCode('');
+        fetchData();
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Verification error.');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    setAuthError('');
+    try {
+      const { error } = await insforge.auth.resendVerificationEmail({
+        email,
+        redirectTo: window.location.origin
+      });
+      if (error) {
+        setAuthError(error.message);
+      } else {
+        alert('Verification OTP code has been resent to your email.');
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Failed to resend code.');
     }
   }
 
@@ -270,6 +324,84 @@ export default function Home() {
 
   // Auth Screen
   if (!user) {
+    if (showOtpInput) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
+          <div className="w-full max-w-md space-y-8 bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-indigo-600/20 blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-purple-600/20 blur-3xl"></div>
+            
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white mb-4">
+                <Key className="h-6 w-6" />
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-white">
+                Verify Email
+              </h2>
+              <p className="mt-2 text-sm text-slate-400">
+                We've sent a 6-digit verification code to <strong className="text-slate-200">{email}</strong>.
+              </p>
+            </div>
+            
+            <form className="mt-8 space-y-6" onSubmit={handleVerifyOtp}>
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                  Verification Code (OTP)
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  className="w-full bg-slate-800/80 border border-slate-700 text-white rounded-lg px-4 py-3 text-center tracking-widest text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                  placeholder="123456"
+                />
+              </div>
+
+              {authError && (
+                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-3 rounded-lg">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <p>{authError}</p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={verifyingOtp}
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {verifyingOtp ? 'Verifying...' : 'Verify Email'}
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  className="w-full flex justify-center py-2 px-4 border border-slate-800 rounded-lg text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition"
+                >
+                  Resend Code
+                </button>
+              </div>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpInput(false);
+                    setAuthError('');
+                  }}
+                  className="text-sm font-medium text-slate-400 hover:text-white transition"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-md space-y-8 bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
