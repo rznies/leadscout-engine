@@ -19,7 +19,12 @@ import {
   Copy,
   Check,
   Compass,
-  AlertCircle
+  AlertCircle,
+  Clock,
+  ArrowRight,
+  ShieldCheck,
+  ChevronRight,
+  Monitor
 } from 'lucide-react';
 
 interface ScrapedPost {
@@ -67,7 +72,6 @@ export default function Home() {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
-
 
   // Dashboard views: 'leads' | 'keywords' | 'analytics'
   const [activeTab, setActiveTab] = useState<'leads' | 'keywords' | 'analytics'>('leads');
@@ -206,7 +210,7 @@ export default function Home() {
     setRefreshing(true);
     try {
       // 1. Fetch keywords
-      const { data: keywordsData, error: kwError } = await insforge.database
+      const { data: keywordsData } = await insforge.database
         .from('monitored_keywords')
         .select('*')
         .order('created_at', { ascending: false });
@@ -214,8 +218,7 @@ export default function Home() {
       if (keywordsData) setKeywords(keywordsData as MonitoredKeyword[]);
 
       // 2. Fetch leads
-      // PostgREST join syntax to embed scraped_posts and monitored_keywords
-      const { data: leadsData, error: lError } = await insforge.database
+      const { data: leadsData } = await insforge.database
         .from('leads')
         .select('*, scraped_posts(*), monitored_keywords(*)')
         .order('created_at', { ascending: false });
@@ -243,7 +246,7 @@ export default function Home() {
     }
 
     try {
-      const { data, error } = await insforge.database
+      const { error } = await insforge.database
         .from('monitored_keywords')
         .insert([{
           user_id: user.id,
@@ -289,7 +292,6 @@ export default function Home() {
       if (error) {
         alert('Failed to update status: ' + error.message);
       } else {
-        // Optimistic local update
         setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l));
       }
     } catch (err) {
@@ -303,7 +305,6 @@ export default function Home() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Filter logic
   const filteredLeads = leads.filter(lead => {
     const post = lead.scraped_posts;
     const matchPlatform = platformFilter === 'all' || post.platform === platformFilter;
@@ -313,292 +314,321 @@ export default function Home() {
 
   if (loading && !user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-100">
-        <div className="flex flex-col items-center gap-4">
-          <RefreshCw className="h-10 w-10 animate-spin text-indigo-500" />
-          <p className="text-slate-400 font-medium">Loading LeadScout.ai...</p>
+      <div className="flex h-screen items-center justify-center bg-[#050505] text-slate-100 font-sans">
+        <div className="flex flex-col items-center gap-6">
+          <div className="h-12 w-12 rounded-full border-t-2 border-indigo-500 animate-spin"></div>
+          <p className="text-neutral-450 text-xs font-semibold tracking-[0.2em] uppercase">Initializing LeadScout</p>
         </div>
       </div>
     );
   }
 
-  // Auth Screen
+  // AUTH SCREENS: LOGIN, SIGNUP, OTP
   if (!user) {
     if (showOtpInput) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
-          <div className="w-full max-w-md space-y-8 bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-indigo-600/20 blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-purple-600/20 blur-3xl"></div>
-            
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white mb-4">
-                <Key className="h-6 w-6" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-white">
-                Verify Email
-              </h2>
-              <p className="mt-2 text-sm text-slate-400">
-                We've sent a 6-digit verification code to <strong className="text-slate-200">{email}</strong>.
-              </p>
-            </div>
-            
-            <form className="mt-8 space-y-6" onSubmit={handleVerifyOtp}>
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                  Verification Code (OTP)
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 text-white rounded-lg px-4 py-3 text-center tracking-widest text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  placeholder="123456"
-                />
-              </div>
+        <div className="flex min-h-screen items-center justify-center bg-[#030303] px-4 py-12 select-none relative overflow-hidden font-sans">
+          {/* Mesh Orb Gradients */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[350px] w-[350px] rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none"></div>
+          <div className="absolute bottom-1/4 left-1/3 h-[250px] w-[250px] rounded-full bg-purple-600/10 blur-[90px] pointer-events-none"></div>
 
-              {authError && (
-                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-3 rounded-lg">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <p>{authError}</p>
+          {/* Double-Bezel Card Wrapper */}
+          <div className="w-full max-w-md bg-[#0a0a0c]/80 border border-white/5 p-2 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]">
+            <div className="bg-[#070709] border border-white/5 p-8 rounded-[calc(2.5rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-6">
+              
+              <div className="flex flex-col items-center text-center">
+                <div className="flex items-center justify-center h-11 w-11 rounded-full bg-white/5 border border-white/10 text-white mb-5">
+                  <Key className="h-4.5 w-4.5" strokeWidth={1.2} />
                 </div>
-              )}
-
-              <div className="flex flex-col gap-3">
-                <button
-                  type="submit"
-                  disabled={verifyingOtp}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {verifyingOtp ? 'Verifying...' : 'Verify Email'}
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  className="w-full flex justify-center py-2 px-4 border border-slate-800 rounded-lg text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition"
-                >
-                  Resend Code
-                </button>
+                <span className="rounded-full bg-indigo-500/10 border border-indigo-500/20 px-3 py-0.5 text-[9px] uppercase tracking-[0.2em] font-bold text-indigo-400 mb-2.5">
+                  Security Code
+                </span>
+                <h2 className="text-2xl font-extrabold tracking-tight text-white">
+                  Verify Your Identity
+                </h2>
+                <p className="mt-2.5 text-xs text-neutral-400 leading-relaxed">
+                  We've sent a 6-digit verification code to <span className="text-neutral-200 font-medium">{email}</span>.
+                </p>
               </div>
 
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowOtpInput(false);
-                    setAuthError('');
-                  }}
-                  className="text-sm font-medium text-slate-400 hover:text-white transition"
-                >
-                  Back to Sign In
-                </button>
-              </div>
-            </form>
+              <form className="space-y-6" onSubmit={handleVerifyOtp}>
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-450 uppercase tracking-widest block mb-2">
+                    Enter Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-center tracking-[0.25em] text-xl font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all duration-500"
+                    placeholder="123456"
+                  />
+                </div>
+
+                {authError && (
+                  <div className="flex items-center gap-2.5 text-red-400 text-xs bg-red-500/5 border border-red-500/10 p-3.5 rounded-xl">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-400" strokeWidth={1.2} />
+                    <p className="font-medium">{authError}</p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {/* Button-in-Button Primary CTA */}
+                  <button
+                    type="submit"
+                    disabled={verifyingOtp}
+                    className="group w-full flex justify-between items-center py-2.5 pl-5 pr-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] shadow-lg shadow-indigo-500/10 disabled:opacity-50"
+                  >
+                    <span>{verifyingOtp ? 'Verifying Code...' : 'Verify & Continue'}</span>
+                    <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                      <ChevronRight className="h-4 w-4" strokeWidth={1.2} />
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    className="w-full text-center py-2 text-xs font-semibold text-neutral-450 hover:text-white transition-colors"
+                  >
+                    Resend Code
+                  </button>
+                </div>
+
+                <div className="text-center pt-2 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOtpInput(false);
+                      setAuthError('');
+                    }}
+                    className="text-xs font-medium text-neutral-400 hover:text-white transition-colors"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md space-y-8 bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-indigo-600/20 blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-purple-600/20 blur-3xl"></div>
-          
-          <div className="flex flex-col items-center text-center">
-            <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white mb-4">
-              <Sparkles className="h-6 w-6" />
+      <div className="flex min-h-screen items-center justify-center bg-[#030303] px-4 py-12 relative overflow-hidden font-sans select-none">
+        {/* Mesh Background Orbs */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[350px] w-[350px] rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none"></div>
+        <div className="absolute bottom-1/4 left-1/3 h-[250px] w-[250px] rounded-full bg-purple-600/10 blur-[90px] pointer-events-none"></div>
+
+        {/* Double-Bezel Card Wrapper */}
+        <div className="w-full max-w-md bg-[#0a0a0c]/80 border border-white/5 p-2 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]">
+          <div className="bg-[#070709] border border-white/5 p-8 rounded-[calc(2.5rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-6">
+            
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center justify-center h-11 w-11 rounded-full bg-white/5 border border-white/10 text-white mb-5">
+                <Sparkles className="h-4.5 w-4.5" strokeWidth={1.2} />
+              </div>
+              <span className="rounded-full bg-white/5 border border-white/10 px-3 py-0.5 text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-400 mb-2.5">
+                Social Intelligence
+              </span>
+              <h2 className="text-3xl font-extrabold tracking-tight text-white">
+                LeadScout.ai
+              </h2>
+              <p className="mt-2 text-xs text-neutral-450 leading-relaxed">
+                Connect and scan Reddit & Twitter feeds for direct intent customers.
+              </p>
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white">
-              LeadScout.ai
-            </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Social Listening & AI Lead Prospecting
-            </p>
+            
+            <form className="space-y-4" onSubmit={handleAuth}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-450 uppercase tracking-widest block mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all duration-500"
+                    placeholder="name@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-450 uppercase tracking-widest block mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all duration-500"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              {authError && (
+                <div className="flex items-center gap-2.5 text-red-400 text-xs bg-red-500/5 border border-red-500/10 p-3.5 rounded-xl">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-400" strokeWidth={1.2} />
+                  <p className="font-medium">{authError}</p>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group w-full flex justify-between items-center py-2.5 pl-5 pr-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] shadow-lg shadow-indigo-500/10 disabled:opacity-50"
+                >
+                  <span>{loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}</span>
+                  <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                    <ChevronRight className="h-4 w-4" strokeWidth={1.2} />
+                  </div>
+                </button>
+              </div>
+
+              <div className="text-center pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setAuthError('');
+                  }}
+                  className="text-xs font-medium text-neutral-450 hover:text-white transition-colors"
+                >
+                  {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                </button>
+              </div>
+            </form>
           </div>
-          
-          <form className="mt-8 space-y-6" onSubmit={handleAuth}>
-            <div className="space-y-4 rounded-md shadow-sm">
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  placeholder="name@company.com"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            {authError && (
-              <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-3 rounded-lg">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <p>{authError}</p>
-              </div>
-            )}
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
-              </button>
-            </div>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setAuthError('');
-                }}
-                className="text-sm font-medium text-slate-400 hover:text-white transition"
-              >
-                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     );
   }
 
-  // Dashboard Screen
+  // MAIN DASHBOARD LAYOUT
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
-      
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-800 bg-slate-900/50 backdrop-blur-md flex flex-col shrink-0">
-        <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
-          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white">
-            <Sparkles className="h-4.5 w-4.5" />
+    <div className="flex min-h-screen bg-[#050507] text-slate-100 font-sans select-none relative overflow-hidden">
+      {/* Background Mesh Gradient Orbs */}
+      <div className="absolute top-0 right-1/4 h-[500px] w-[500px] rounded-full bg-indigo-600/[0.03] blur-[140px] pointer-events-none"></div>
+      <div className="absolute bottom-0 left-1/4 h-[400px] w-[400px] rounded-full bg-purple-600/[0.03] blur-[120px] pointer-events-none"></div>
+
+      {/* Sidebar Panel */}
+      <aside className="w-68 border-r border-white/5 bg-[#0a0a0c]/60 backdrop-blur-2xl flex flex-col shrink-0 relative z-10">
+        <div className="h-16 flex items-center gap-3 px-6 border-b border-white/5">
+          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/10">
+            <Sparkles className="h-4.5 w-4.5" strokeWidth={1.2} />
           </div>
-          <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+          <span className="font-extrabold text-sm uppercase tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-400">
             LeadScout.ai
           </span>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1.5">
+        <nav className="flex-1 px-4 py-8 space-y-1.5">
           <button
             onClick={() => setActiveTab('leads')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
               activeTab === 'leads'
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100 border border-transparent'
+                ? 'bg-white/[0.04] text-white border border-white/10 shadow-[inset_0_1px_0px_rgba(255,255,255,0.05)]'
+                : 'text-neutral-400 hover:bg-white/[0.02] hover:text-white border border-transparent'
             }`}
           >
-            <Compass className="h-5 w-5" />
+            <Compass className="h-4.5 w-4.5" strokeWidth={1.2} />
             Prospect Leads
           </button>
           
           <button
             onClick={() => setActiveTab('keywords')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
               activeTab === 'keywords'
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100 border border-transparent'
+                ? 'bg-white/[0.04] text-white border border-white/10 shadow-[inset_0_1px_0px_rgba(255,255,255,0.05)]'
+                : 'text-neutral-400 hover:bg-white/[0.02] hover:text-white border border-transparent'
             }`}
           >
-            <Search className="h-5 w-5" />
+            <Search className="h-4.5 w-4.5" strokeWidth={1.2} />
             Monitor Keywords
           </button>
 
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
               activeTab === 'analytics'
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100 border border-transparent'
+                ? 'bg-white/[0.04] text-white border border-white/10 shadow-[inset_0_1px_0px_rgba(255,255,255,0.05)]'
+                : 'text-neutral-400 hover:bg-white/[0.02] hover:text-white border border-transparent'
             }`}
           >
-            <TrendingUp className="h-5 w-5" />
+            <TrendingUp className="h-4.5 w-4.5" strokeWidth={1.2} />
             Performance Insights
           </button>
         </nav>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-900/80">
-          <div className="flex items-center gap-3 mb-4 overflow-hidden">
-            <div className="h-9 w-9 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold shrink-0">
+        {/* User Account Capsule */}
+        <div className="p-4 border-t border-white/5 bg-[#070709]/80">
+          <div className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/5 rounded-2xl mb-4 overflow-hidden shadow-inner">
+            <div className="h-8.5 w-8.5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-extrabold shadow-sm shrink-0">
               {user.email[0].toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-400 font-medium truncate">Logged in as</p>
-              <p className="text-sm text-slate-200 font-semibold truncate">{user.email}</p>
+              <p className="text-[9px] text-neutral-450 font-bold uppercase tracking-wider truncate">Operator Account</p>
+              <p className="text-xs text-neutral-250 font-semibold truncate leading-tight">{user.email}</p>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-slate-800 rounded-lg text-sm font-semibold text-slate-400 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 transition"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-white/5 hover:border-red-500/10 rounded-xl text-xs font-bold text-neutral-450 hover:text-red-400 hover:bg-red-500/5 transition-all duration-500"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4.5 w-4.5" strokeWidth={1.2} />
             Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Header */}
-        <header className="h-16 border-b border-slate-800 px-8 flex items-center justify-between bg-slate-900/20 backdrop-blur-md">
-          <h1 className="text-xl font-bold tracking-tight text-white capitalize">
-            {activeTab === 'leads' ? 'Lead Prospecting' : activeTab === 'keywords' ? 'Monitored Keywords' : 'Performance Insights'}
+      {/* Main Panel Viewport */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative z-10">
+        
+        {/* Header Block */}
+        <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between bg-[#0a0a0c]/20 backdrop-blur-md">
+          <h1 className="text-sm font-extrabold uppercase tracking-widest text-white">
+            {activeTab === 'leads' ? 'Prospect Leads Feed' : activeTab === 'keywords' ? 'Monitored Keywords' : 'Performance Insights'}
           </h1>
           <div className="flex items-center gap-4">
             <button
               onClick={fetchData}
               disabled={refreshing}
-              className="flex items-center gap-2 py-2 px-4 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-sm font-medium transition text-slate-300"
+              className="flex items-center gap-2 py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-full text-xs font-bold transition-all duration-500 text-neutral-200"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={1.2} />
+              {refreshing ? 'Syncing...' : 'Sync Data'}
             </button>
           </div>
         </header>
 
-        {/* Content Body */}
-        <div className="p-8 max-w-7xl w-full mx-auto space-y-8">
+        {/* Content View container */}
+        <div className="p-8 max-w-6xl w-full mx-auto space-y-10 min-h-[calc(100vh-4rem)] flex flex-col justify-start">
           
           {/* VIEW: LEADS */}
           {activeTab === 'leads' && (
-            <div className="space-y-6">
+            <div className="space-y-8 animate-fade-up">
               
-              {/* Filter bar */}
-              <div className="flex flex-col sm:flex-row gap-4 bg-slate-900/30 p-4 border border-slate-850 rounded-2xl">
-                <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
-                    Filter Platform
-                  </label>
-                  <div className="flex gap-1.5 bg-slate-950 p-1 border border-slate-800 rounded-xl">
+              {/* Asymmetric Filter Grid */}
+              <div className="grid grid-cols-12 gap-6 bg-[#0a0a0c]/50 p-6 border border-white/5 rounded-3xl backdrop-blur-md">
+                
+                <div className="col-span-12 md:col-span-6 space-y-2">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">
+                    Platform Scope
+                  </span>
+                  <div className="flex bg-black p-1 border border-white/5 rounded-full w-max">
                     {(['all', 'reddit', 'twitter'] as const).map(p => (
                       <button
                         key={p}
                         onClick={() => setPlatformFilter(p)}
-                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg capitalize transition ${
+                        className={`text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-wider transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                           platformFilter === p
-                            ? 'bg-indigo-600 text-white'
-                            : 'text-slate-400 hover:text-white'
+                            ? 'bg-white/10 text-white border border-white/5 shadow-md'
+                            : 'text-neutral-450 hover:text-white'
                         }`}
                       >
                         {p}
@@ -607,19 +637,19 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
-                    Filter Status
-                  </label>
-                  <div className="flex gap-1.5 bg-slate-950 p-1 border border-slate-800 rounded-xl">
+                <div className="col-span-12 md:col-span-6 space-y-2">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">
+                    Lead Phase
+                  </span>
+                  <div className="flex bg-black p-1 border border-white/5 rounded-full w-max flex-wrap gap-0.5">
                     {(['all', 'new', 'drafted', 'sent', 'ignored'] as const).map(s => (
                       <button
                         key={s}
                         onClick={() => setStatusFilter(s)}
-                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg capitalize transition ${
+                        className={`text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-wider transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                           statusFilter === s
-                            ? 'bg-indigo-600 text-white'
-                            : 'text-slate-400 hover:text-white'
+                            ? 'bg-white/10 text-white border border-white/5 shadow-md'
+                            : 'text-neutral-450 hover:text-white'
                         }`}
                       >
                         {s}
@@ -627,16 +657,19 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+
               </div>
 
-              {/* Leads list */}
+              {/* Bento Grid Leads List */}
               {filteredLeads.length === 0 ? (
-                <div className="text-center py-20 bg-slate-900/10 border border-dashed border-slate-800 rounded-2xl">
-                  <MessageSquare className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-bold text-slate-300">No leads found</h3>
-                  <p className="text-slate-500 mt-1 max-w-sm mx-auto">
-                    Configure your monitored keywords and run the Python worker command to capture qualified social leads.
-                  </p>
+                <div className="text-center py-28 bg-[#0a0a0c]/20 border border-dashed border-white/5 rounded-[2.5rem] space-y-4">
+                  <MessageSquare className="h-10 w-10 text-neutral-500 mx-auto" strokeWidth={1} />
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Empty Leads List</h3>
+                    <p className="text-xs text-neutral-450 max-w-sm mx-auto leading-relaxed">
+                      Configure your active monitoring keywords and run the Python worker command to capture qualified customer leads.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6">
@@ -644,120 +677,127 @@ export default function Home() {
                     const post = lead.scraped_posts;
                     const keyword = lead.monitored_keywords;
                     
-                    // Score styling
                     const scoreColor = lead.intent_score >= 80 
-                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                      ? 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10'
                       : lead.intent_score >= 50
-                      ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                      : 'text-slate-400 bg-slate-500/10 border-slate-500/20';
+                      ? 'text-amber-400 bg-amber-500/5 border-amber-500/10'
+                      : 'text-neutral-400 bg-neutral-500/5 border-neutral-500/10';
 
                     return (
                       <div 
                         key={lead.id} 
-                        className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 relative overflow-hidden transition hover:border-slate-700/80 group"
+                        className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2.2rem] shadow-2xl backdrop-blur-md transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/10"
                       >
-                        {/* Header metadata */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                              post.platform === 'twitter' 
-                                ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' 
-                                : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-                            }`}>
-                              {post.platform}
-                            </span>
-                            <span className="text-slate-500 text-xs font-medium">
-                              Keyword: <strong className="text-slate-300">{keyword?.keyword || 'N/A'}</strong>
-                            </span>
-                            <span className="text-slate-500 text-xs">
-                              • Scraped {new Date(post.scraped_at).toLocaleDateString()}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${scoreColor}`}>
-                              <Award className="h-3.5 w-3.5" />
-                              Intent: {lead.intent_score}/100
+                        <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2.2rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-5">
+                          
+                          {/* Row metadata header */}
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex items-center gap-3.5">
+                              <span className={`text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${
+                                post.platform === 'twitter' 
+                                  ? 'bg-sky-500/5 text-sky-400 border border-sky-500/10' 
+                                  : 'bg-orange-500/5 text-orange-400 border border-orange-500/10'
+                              }`}>
+                                {post.platform}
+                              </span>
+                              <span className="text-neutral-450 text-[10px] font-semibold uppercase tracking-wider">
+                                Keyword: <strong className="text-neutral-250">{keyword?.keyword || 'N/A'}</strong>
+                              </span>
                             </div>
 
-                            <select
-                              value={lead.status}
-                              onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as any)}
-                              className="bg-slate-950 border border-slate-800 text-slate-300 rounded-lg text-xs font-medium px-2.5 py-1.5 focus:outline-none"
-                            >
-                              <option value="new">New</option>
-                              <option value="drafted">Drafted</option>
-                              <option value="sent">Sent</option>
-                              <option value="ignored">Ignored</option>
-                            </select>
-                          </div>
-                        </div>
+                            <div className="flex items-center gap-3">
+                              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold ${scoreColor}`}>
+                                <Award className="h-3.5 w-3.5" strokeWidth={1.2} />
+                                Intent: {lead.intent_score}/100
+                              </div>
 
-                        {/* Title and Post Content */}
-                        <div className="mb-4">
-                          {post.title && (
-                            <h3 className="text-base font-bold text-white mb-2 leading-tight">
-                              {post.title}
-                            </h3>
+                              <select
+                                value={lead.status}
+                                onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as any)}
+                                className="bg-[#0a0a0c] border border-white/5 text-neutral-300 rounded-full text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              >
+                                <option value="new">New</option>
+                                <option value="drafted">Drafted</option>
+                                <option value="sent">Sent</option>
+                                <option value="ignored">Ignored</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Post contents */}
+                          <div className="space-y-2">
+                            {post.title && (
+                              <h3 className="text-sm font-extrabold text-white leading-tight">
+                                {post.title}
+                              </h3>
+                            )}
+                            <p className="text-neutral-350 text-xs whitespace-pre-wrap leading-relaxed bg-[#0a0a0c]/50 p-4 rounded-xl border border-white/5 shadow-inner">
+                              {post.content}
+                            </p>
+                          </div>
+
+                          {/* AI reasoning analysis */}
+                          {lead.reasoning && (
+                            <div className="bg-indigo-500/[0.02] border border-indigo-500/10 rounded-xl p-4 flex items-start gap-3">
+                              <div className="h-6 w-6 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+                                <Sparkles className="h-3.5 w-3.5 text-indigo-400" strokeWidth={1.2} />
+                              </div>
+                              <div className="space-y-0.5">
+                                <h4 className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest">
+                                  AI Qualification Reasoning
+                                </h4>
+                                <p className="text-neutral-300 text-xs italic">
+                                  "{lead.reasoning}"
+                                </p>
+                              </div>
+                            </div>
                           )}
-                          <p className="text-slate-350 text-sm whitespace-pre-wrap line-clamp-3 bg-slate-950/40 p-3 rounded-lg border border-slate-850/50">
-                            {post.content}
-                          </p>
-                        </div>
 
-                        {/* AI Qualification Reasoning */}
-                        {lead.reasoning && (
-                          <div className="mb-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-4">
-                            <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
-                              <Sparkles className="h-3.5 w-3.5" />
-                              AI Qualifying Analysis
-                            </h4>
-                            <p className="text-slate-300 text-xs font-medium italic">
-                              "{lead.reasoning}"
-                            </p>
-                          </div>
-                        )}
+                          {/* AI reply proposal & CTA buttons */}
+                          {lead.draft_reply && (
+                            <div className="bg-[#050507]/80 border border-white/5 rounded-xl p-5 relative space-y-4">
+                              <div className="flex items-center gap-2">
+                                <MessageSquare className="h-3.5 w-3.5 text-neutral-450" strokeWidth={1.2} />
+                                <h4 className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
+                                  Draft Response Proposal
+                                </h4>
+                              </div>
+                              <p className="text-neutral-350 text-xs whitespace-pre-wrap leading-relaxed pb-8">
+                                {lead.draft_reply}
+                              </p>
+                              
+                              <div className="absolute bottom-4 right-4 flex gap-2">
+                                <button
+                                  onClick={() => copyToClipboard(lead.draft_reply || '', lead.id)}
+                                  className="flex items-center gap-1.5 bg-[#0a0a0c] border border-white/5 hover:border-white/10 text-neutral-400 hover:text-white rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-500 shadow-sm"
+                                >
+                                  {copiedId === lead.id ? (
+                                    <>
+                                      <Check className="h-3.5 w-3.5 text-green-400" strokeWidth={1.2} />
+                                      Copied
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="h-3.5 w-3.5" strokeWidth={1.2} />
+                                      Copy Draft
+                                    </>
+                                  )}
+                                </button>
 
-                        {/* AI Draft Response */}
-                        {lead.draft_reply && (
-                          <div className="bg-slate-950/70 border border-slate-850 rounded-xl p-4 relative">
-                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-                              Draft Reply Proposal
-                            </h4>
-                            <p className="text-slate-300 text-xs whitespace-pre-wrap pb-10">
-                              {lead.draft_reply}
-                            </p>
-                            
-                            <div className="absolute bottom-3 right-3 flex gap-2">
-                              <button
-                                onClick={() => copyToClipboard(lead.draft_reply || '', lead.id)}
-                                className="flex items-center gap-1 bg-slate-900 border border-slate-800 hover:border-indigo-500 hover:text-indigo-400 text-slate-400 rounded-lg px-2.5 py-1.5 text-xs font-medium transition"
-                              >
-                                {copiedId === lead.id ? (
-                                  <>
-                                    <Check className="h-3.5 w-3.5 text-green-400" />
-                                    Copied
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="h-3.5 w-3.5" />
-                                    Copy
-                                  </>
-                                )}
-                              </button>
-
-                              <a
-                                href={post.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1 bg-slate-900 border border-slate-800 hover:border-indigo-500 hover:text-indigo-400 text-slate-400 rounded-lg px-2.5 py-1.5 text-xs font-medium transition"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Go to Post
-                              </a>
+                                <a
+                                  href={post.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-1.5 bg-[#0a0a0c] border border-white/5 hover:border-white/10 text-neutral-400 hover:text-white rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-500 shadow-sm"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.2} />
+                                  Open Post
+                                </a>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+
+                        </div>
                       </div>
                     );
                   })}
@@ -768,109 +808,117 @@ export default function Home() {
 
           {/* VIEW: KEYWORDS */}
           {activeTab === 'keywords' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-12 gap-8 animate-fade-up">
               
-              {/* Left Column: Form */}
-              <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl space-y-6 self-start">
-                <h2 className="text-lg font-bold text-white">Add Monitored Keyword</h2>
-                
-                <form onSubmit={handleAddKeyword} className="space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-2">
-                      Search Keyword or Phrase
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={newKeyword}
-                      onChange={(e) => setNewKeyword(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                      placeholder="e.g. recommend a calendar app"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-2">
-                      Platforms to Scrape
-                    </label>
-                    <div className="space-y-2.5">
-                      <label className="flex items-center gap-3 text-slate-300 text-sm font-medium cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={redditChecked}
-                          onChange={(e) => setRedditChecked(e.target.checked)}
-                          className="h-4.5 w-4.5 rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        Reddit searches
+              {/* Left Form Panel */}
+              <div className="col-span-12 lg:col-span-4 bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2.2rem] shadow-2xl backdrop-blur-md self-start">
+                <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2.2rem-0.5rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] space-y-6">
+                  
+                  <h2 className="text-sm font-extrabold uppercase tracking-widest text-white">Add Keyword</h2>
+                  
+                  <form onSubmit={handleAddKeyword} className="space-y-6">
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-450 uppercase tracking-widest block mb-2">
+                        Query Word or Phrase
                       </label>
-                      <label className="flex items-center gap-3 text-slate-300 text-sm font-medium cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={twitterChecked}
-                          onChange={(e) => setTwitterChecked(e.target.checked)}
-                          className="h-4.5 w-4.5 rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        Twitter / X posts
+                      <input
+                        type="text"
+                        required
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        className="w-full bg-white/[0.02] border border-white/5 text-white rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-500"
+                        placeholder="e.g. recommend a calendar app"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-450 uppercase tracking-widest block mb-2">
+                        Scraping Channels
                       </label>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 text-neutral-350 text-xs font-semibold cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={redditChecked}
+                            onChange={(e) => setRedditChecked(e.target.checked)}
+                            className="h-4 w-4 rounded border-white/10 bg-[#0a0a0c] text-indigo-600 focus:ring-indigo-500"
+                          />
+                          Reddit Scraper
+                        </label>
+                        <label className="flex items-center gap-3 text-neutral-350 text-xs font-semibold cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={twitterChecked}
+                            onChange={(e) => setTwitterChecked(e.target.checked)}
+                            className="h-4 w-4 rounded border-white/10 bg-[#0a0a0c] text-indigo-600 focus:ring-indigo-500"
+                          />
+                          Twitter / X Scraper
+                        </label>
+                      </div>
                     </div>
-                  </div>
 
-                  {keywordError && (
-                    <div className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 p-3 rounded-lg flex items-center gap-2">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span>{keywordError}</span>
-                    </div>
-                  )}
+                    {keywordError && (
+                      <div className="text-red-400 text-xs bg-red-500/5 border border-red-500/10 p-3.5 rounded-xl flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-red-450" strokeWidth={1.2} />
+                        <span>{keywordError}</span>
+                      </div>
+                    )}
 
-                  <button
-                    type="submit"
-                    className="w-full flex justify-center items-center gap-2 py-2.5 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition shadow-lg shadow-indigo-600/10"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Save Keyword
-                  </button>
-                </form>
+                    {/* Button-in-button style primary CTA */}
+                    <button
+                      type="submit"
+                      className="group w-full flex justify-between items-center py-2 pl-4 pr-1.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] shadow-lg shadow-indigo-500/10"
+                    >
+                      <span>Create Monitor</span>
+                      <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                        <Plus className="h-4 w-4" strokeWidth={1.2} />
+                      </div>
+                    </button>
+                  </form>
+                </div>
               </div>
 
-              {/* Right Column: List */}
-              <div className="lg:col-span-2 space-y-6">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  Active Monitoring List
-                  <span className="text-xs font-normal text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full">
-                    {keywords.length} monitored
+              {/* Right Keywords List */}
+              <div className="col-span-12 lg:col-span-8 space-y-6">
+                <h2 className="text-sm font-extrabold uppercase tracking-widest text-white flex items-center gap-2">
+                  Active Keywords
+                  <span className="text-[10px] font-bold text-neutral-450 bg-white/5 border border-white/5 px-2.5 py-0.5 rounded-full">
+                    {keywords.length} active
                   </span>
                 </h2>
 
                 {keywords.length === 0 ? (
-                  <div className="text-center py-20 bg-slate-900/10 border border-dashed border-slate-800 rounded-2xl">
-                    <Search className="h-10 w-10 text-slate-500 mx-auto mb-4" />
-                    <p className="text-slate-400">No active monitoring keywords configured.</p>
+                  <div className="text-center py-20 bg-[#0a0a0c]/20 border border-dashed border-white/5 rounded-[2rem]">
+                    <Search className="h-8 w-8 text-neutral-500 mx-auto mb-3" strokeWidth={1} />
+                    <p className="text-xs text-neutral-450">No active keywords monitored yet.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {keywords.map(kw => (
                       <div 
                         key={kw.id} 
-                        className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 flex items-center justify-between gap-4 transition hover:border-slate-700/80"
+                        className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md flex items-center justify-between"
                       >
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-bold text-white truncate mb-1.5">
-                            {kw.keyword}
-                          </h3>
-                          <div className="flex gap-1.5 flex-wrap">
-                            {kw.platforms.map(p => (
-                              <span key={p} className="text-[10px] font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded uppercase tracking-wider">
-                                {p}
-                              </span>
-                            ))}
+                        <div className="bg-[#070709] border border-white/5 p-5 rounded-[calc(2rem-0.5rem)] w-full flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <h3 className="text-xs font-bold text-white truncate mb-2">
+                              {kw.keyword}
+                            </h3>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {kw.platforms.map(p => (
+                                <span key={p} className="text-[9px] font-bold text-neutral-400 bg-white/5 border border-white/5 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                  {p}
+                                </span>
+                              ))}
+                            </div>
                           </div>
+                          <button
+                            onClick={() => handleDeleteKeyword(kw.id)}
+                            className="p-2.5 border border-white/5 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 transition-all duration-500 shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" strokeWidth={1.2} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleDeleteKeyword(kw.id)}
-                          className="p-2 border border-slate-800 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 transition shrink-0"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     ))}
                   </div>
@@ -882,115 +930,135 @@ export default function Home() {
 
           {/* VIEW: ANALYTICS */}
           {activeTab === 'analytics' && (
-            <div className="space-y-8">
+            <div className="space-y-8 animate-fade-up">
               
-              {/* Summary stat cards */}
+              {/* Stat grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 
-                <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Total Leads</span>
-                    <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20">
-                      <Compass className="h-4 w-4" />
+                <div className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md flex">
+                  <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2rem-0.5rem)] w-full space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Total Leads</span>
+                      <div className="p-2 bg-indigo-500/5 rounded-lg text-indigo-400 border border-indigo-500/10">
+                        <Compass className="h-4.5 w-4.5" strokeWidth={1.2} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-3xl font-extrabold text-white tracking-tight">{leads.length}</p>
+                      <p className="text-[10px] text-neutral-450 mt-1 uppercase tracking-wide">Captured Leads</p>
                     </div>
                   </div>
-                  <p className="text-3xl font-extrabold text-white">{leads.length}</p>
-                  <p className="text-xs text-slate-500 mt-1">Qualified leads captured</p>
                 </div>
 
-                <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">High Intent (80+)</span>
-                    <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
-                      <CheckCircle className="h-4 w-4" />
+                <div className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md flex">
+                  <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2rem-0.5rem)] w-full space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">High Intent (80+)</span>
+                      <div className="p-2 bg-emerald-500/5 rounded-lg text-emerald-400 border border-emerald-500/10">
+                        <CheckCircle className="h-4.5 w-4.5" strokeWidth={1.2} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-3xl font-extrabold text-white tracking-tight">
+                        {leads.filter(l => l.intent_score >= 80).length}
+                      </p>
+                      <p className="text-[10px] text-neutral-450 mt-1 uppercase tracking-wide">Buy signals</p>
                     </div>
                   </div>
-                  <p className="text-3xl font-extrabold text-white">
-                    {leads.filter(l => l.intent_score >= 80).length}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">Direct buy indicator targets</p>
                 </div>
 
-                <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Pending Review</span>
-                    <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400 border border-amber-500/20">
-                      <MessageSquare className="h-4 w-4" />
+                <div className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md flex">
+                  <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2rem-0.5rem)] w-full space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Pending Review</span>
+                      <div className="p-2 bg-amber-500/5 rounded-lg text-amber-400 border border-amber-500/10">
+                        <MessageSquare className="h-4.5 w-4.5" strokeWidth={1.2} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-3xl font-extrabold text-white tracking-tight">
+                        {leads.filter(l => l.status === 'new').length}
+                      </p>
+                      <p className="text-[10px] text-neutral-450 mt-1 uppercase tracking-wide">New Inbox drafts</p>
                     </div>
                   </div>
-                  <p className="text-3xl font-extrabold text-white">
-                    {leads.filter(l => l.status === 'new').length}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">Unprocessed new drafts</p>
                 </div>
 
-                <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Average Score</span>
-                    <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400 border border-purple-500/20">
-                      <TrendingUp className="h-4 w-4" />
+                <div className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md flex">
+                  <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2rem-0.5rem)] w-full space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Average Score</span>
+                      <div className="p-2 bg-purple-500/5 rounded-lg text-purple-400 border border-purple-500/10">
+                        <TrendingUp className="h-4.5 w-4.5" strokeWidth={1.2} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-3xl font-extrabold text-white tracking-tight">
+                        {leads.length > 0 
+                          ? Math.round(leads.reduce((acc, l) => acc + l.intent_score, 0) / leads.length)
+                          : 0}
+                      </p>
+                      <p className="text-[10px] text-neutral-450 mt-1 uppercase tracking-wide">Quality Index</p>
                     </div>
                   </div>
-                  <p className="text-3xl font-extrabold text-white">
-                    {leads.length > 0 
-                      ? Math.round(leads.reduce((acc, l) => acc + l.intent_score, 0) / leads.length)
-                      : 0}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">Overall intent quality rating</p>
                 </div>
 
               </div>
 
-              {/* Status and source analytics split blocks */}
+              {/* Progress bars split blocks */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
                 {/* Source Split */}
-                <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 block">Platform Channels Distribution</h3>
-                  <div className="space-y-4">
-                    {['reddit', 'twitter'].map(channel => {
-                      const count = leads.filter(l => l.scraped_posts.platform === channel).length;
-                      const pct = leads.length > 0 ? (count / leads.length) * 100 : 0;
-                      return (
-                        <div key={channel}>
-                          <div className="flex items-center justify-between text-xs font-semibold mb-1">
-                            <span className="capitalize text-slate-300">{channel}</span>
-                            <span className="text-slate-400">{count} ({Math.round(pct)}%)</span>
+                <div className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md">
+                  <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2rem-0.5rem)] space-y-5">
+                    <h3 className="text-[10px] font-bold text-white uppercase tracking-widest">Platform Channels</h3>
+                    <div className="space-y-4.5">
+                      {['reddit', 'twitter'].map(channel => {
+                        const count = leads.filter(l => l.scraped_posts.platform === channel).length;
+                        const pct = leads.length > 0 ? (count / leads.length) * 100 : 0;
+                        return (
+                          <div key={channel} className="space-y-2">
+                            <div className="flex items-center justify-between text-xs font-semibold">
+                              <span className="capitalize text-neutral-350">{channel}</span>
+                              <span className="text-neutral-400">{count} ({Math.round(pct)}%)</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-white/[0.02] rounded-full overflow-hidden border border-white/5">
+                              <div 
+                                className={`h-full rounded-full ${channel === 'reddit' ? 'bg-orange-500/80' : 'bg-sky-400/80'}`}
+                                style={{ width: `${pct}%` }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-900">
-                            <div 
-                              className={`h-full rounded-full ${channel === 'reddit' ? 'bg-orange-500' : 'bg-sky-400'}`}
-                              style={{ width: `${pct}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
                 {/* Status Split */}
-                <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 block">Lead Conversion Funnel</h3>
-                  <div className="space-y-4">
-                    {['new', 'drafted', 'sent', 'ignored'].map(status => {
-                      const count = leads.filter(l => l.status === status).length;
-                      const pct = leads.length > 0 ? (count / leads.length) * 100 : 0;
-                      return (
-                        <div key={status}>
-                          <div className="flex items-center justify-between text-xs font-semibold mb-1">
-                            <span className="capitalize text-slate-300">{status}</span>
-                            <span className="text-slate-400">{count} ({Math.round(pct)}%)</span>
+                <div className="bg-[#0e0e11]/30 border border-white/5 p-2 rounded-[2rem] shadow-2xl backdrop-blur-md">
+                  <div className="bg-[#070709] border border-white/5 p-6 rounded-[calc(2rem-0.5rem)] space-y-5">
+                    <h3 className="text-[10px] font-bold text-white uppercase tracking-widest">Conversion Funnel</h3>
+                    <div className="space-y-4.5">
+                      {['new', 'drafted', 'sent', 'ignored'].map(status => {
+                        const count = leads.filter(l => l.status === status).length;
+                        const pct = leads.length > 0 ? (count / leads.length) * 100 : 0;
+                        return (
+                          <div key={status} className="space-y-2">
+                            <div className="flex items-center justify-between text-xs font-semibold">
+                              <span className="capitalize text-neutral-350">{status}</span>
+                              <span className="text-neutral-400">{count} ({Math.round(pct)}%)</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-white/[0.02] rounded-full overflow-hidden border border-white/5">
+                              <div 
+                                className="h-full rounded-full bg-indigo-500/80"
+                                style={{ width: `${pct}%` }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-900">
-                            <div 
-                              className="h-full rounded-full bg-indigo-500"
-                              style={{ width: `${pct}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
